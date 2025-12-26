@@ -7,12 +7,16 @@ import {
   Target, Zap, Calendar, ArrowUpRight
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // --- Main Dashboard Component ---
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const { leads, deals, tasks, loading } = useData();
 
   // Get greeting based on time
   const getGreeting = () => {
@@ -22,13 +26,43 @@ export const Dashboard: React.FC = () => {
     return 'Good Evening';
   };
 
+  // Metrics Calculation
+  const pipelineValue = deals.reduce((acc, deal) => acc + deal.numericValue, 0);
+  const hotLeadsCount = leads.filter(l => l.temperature === 'Hot').length;
+  const closingsThisMonth = deals.filter(d =>
+    d.stage === 'closed' &&
+    d.lastTouch.includes('Just now') // Simplified for demo, ideally check date
+  ).length;
+
+  const upcomingTasks = tasks.filter(t => !t.isOverdue && t.status !== 'completed').slice(0, 3);
+  const newLeads = leads.filter(l => l.status === 'New').slice(0, 3);
+
+  // Pipeline Progress Helpers
+  const getDealsByStage = (stage: string) => deals.filter(d => d.stage === stage);
+  const getStageTotal = (stage: string) => getDealsByStage(stage).reduce((acc, curr) => acc + curr.numericValue, 0);
+  const pipelineTotal = pipelineValue || 1; // Avoid div by zero
+
+  const formatCurrency = (val: number) => {
+    if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)} Cr`;
+    if (val >= 100000) return `₹${(val / 100000).toFixed(1)} L`;
+    return `₹${(val / 1000).toFixed(0)}k`;
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="w-8 h-8 border-3 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-64px)] md:h-screen flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden transition-colors">
 
       {/* --- Header --- */}
       <div className="px-4 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0 transition-colors">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white">{getGreeting()}, Jane</h1>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-white">{getGreeting()}, {user?.displayName?.split(' ')[0] || 'User'}</h1>
           <p className="hidden md:block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
@@ -58,10 +92,9 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <span className="text-xs font-medium text-slate-300 uppercase tracking-wide">YTD Earnings</span>
               </div>
-              <p className="text-2xl md:text-3xl font-bold text-white">₹1.18 Cr</p>
+              <p className="text-2xl md:text-3xl font-bold text-white">₹0</p>
               <div className="flex items-center gap-1 mt-2">
-                <ArrowUpRight className="w-3 h-3 text-emerald-400" />
-                <span className="text-xs font-medium text-emerald-400">+12% from last year</span>
+                <span className="text-xs font-medium text-slate-400">Track your success</span>
               </div>
             </div>
 
@@ -71,8 +104,8 @@ export const Dashboard: React.FC = () => {
                 <div className="w-2 h-2 rounded-full bg-blue-400" />
                 <span className="text-[10px] font-medium text-slate-400 uppercase">Pipeline</span>
               </div>
-              <p className="text-xl font-bold text-white">₹19.9 Cr</p>
-              <p className="text-[10px] text-slate-400 mt-1">5 Active Deals</p>
+              <p className="text-xl font-bold text-white">{formatCurrency(pipelineValue)}</p>
+              <p className="text-[10px] text-slate-400 mt-1">{deals.length} Active Deals</p>
             </div>
 
             {/* Hot Leads */}
@@ -81,7 +114,7 @@ export const Dashboard: React.FC = () => {
                 <div className="w-2 h-2 rounded-full bg-orange-400" />
                 <span className="text-[10px] font-medium text-slate-400 uppercase">Hot Leads</span>
               </div>
-              <p className="text-xl font-bold text-white">14</p>
+              <p className="text-xl font-bold text-white">{hotLeadsCount}</p>
               <p className="text-[10px] text-slate-400 mt-1">Need Attention</p>
             </div>
 
@@ -91,7 +124,7 @@ export const Dashboard: React.FC = () => {
                 <div className="w-2 h-2 rounded-full bg-emerald-400" />
                 <span className="text-[10px] font-medium text-slate-400 uppercase">Closings</span>
               </div>
-              <p className="text-xl font-bold text-white">2</p>
+              <p className="text-xl font-bold text-white">{closingsThisMonth}</p>
               <p className="text-[10px] text-slate-400 mt-1">This Month</p>
             </div>
           </div>
@@ -141,31 +174,31 @@ export const Dashboard: React.FC = () => {
               </button>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-700">
-              {[
-                { name: 'Sarah Miller', task: 'Follow-up call', time: '10:00 AM', isOverdue: false },
-                { name: 'John Doe', task: 'Send property details', time: 'Overdue', isOverdue: true },
-                { name: 'Alex King', task: 'Schedule showing', time: '2:30 PM', isOverdue: false }
-              ].map((item, i) => (
+              {upcomingTasks.length > 0 ? upcomingTasks.map((item, i) => (
                 <div key={i} className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                      {item.name.charAt(0)}
+                      {item.leadName.charAt(0)}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-800 dark:text-white text-sm">{item.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{item.task}</p>
+                      <p className="font-semibold text-slate-800 dark:text-white text-sm">{item.leadName}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{item.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`text-xs font-medium px-2 py-1 rounded-lg ${item.isOverdue ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                      {item.time}
+                      {item.displayTime}
                     </span>
                     <button className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
                       <Phone className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-sm">
+                  No priority tasks for today!
+                </div>
+              )}
             </div>
           </div>
 
@@ -190,20 +223,24 @@ export const Dashboard: React.FC = () => {
               </div>
               <div className="p-4 space-y-4">
                 {[
-                  { stage: 'Negotiation', value: '₹9.96 Cr', percent: 60, color: 'bg-blue-500' },
-                  { stage: 'Under Contract', value: '₹7.05 Cr', percent: 35, color: 'bg-amber-500' },
-                  { stage: 'Closing', value: '₹3.73 Cr', percent: 18, color: 'bg-emerald-500' }
-                ].map((item, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{item.stage}</span>
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.value}</span>
+                  { stage: 'negotiation', label: 'Negotiation', color: 'bg-blue-500' },
+                  { stage: 'documentation', label: 'Under Contract', color: 'bg-amber-500' },
+                  { stage: 'payment', label: 'Closing', color: 'bg-emerald-500' }
+                ].map((item, i) => {
+                  const stageTotal = getStageTotal(item.stage);
+                  const percent = (stageTotal / pipelineTotal) * 100;
+                  return (
+                    <div key={i} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{item.label}</span>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{formatCurrency(stageTotal)}</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div className={`h-full ${item.color} rounded-full`} style={{ width: `${percent}%` }} />
+                      </div>
                     </div>
-                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.percent}%` }} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -215,7 +252,7 @@ export const Dashboard: React.FC = () => {
                     <Users className="w-4 h-4 text-purple-500 dark:text-purple-400" />
                   </div>
                   <h3 className="font-bold text-slate-800 dark:text-white text-sm">New Leads</h3>
-                  <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">3 NEW</span>
+                  <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{newLeads.length} NEW</span>
                 </div>
                 <button
                   onClick={() => navigate('/leads')}
@@ -225,11 +262,7 @@ export const Dashboard: React.FC = () => {
                 </button>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                {[
-                  { name: 'Mike Thompson', source: 'Zillow', budget: '₹4.15-5 Cr' },
-                  { name: 'Lisa Chen', source: 'Referral', budget: '₹6.22-7.05 Cr' },
-                  { name: 'David Wilson', source: 'Website', budget: '₹3.32-4.15 Cr' }
-                ].map((item, i) => (
+                {newLeads.length > 0 ? newLeads.map((item, i) => (
                   <div key={i} className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer" onClick={() => navigate('/leads')}>
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs">
@@ -242,7 +275,11 @@ export const Dashboard: React.FC = () => {
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-400" />
                   </div>
-                ))}
+                )) : (
+                  <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-sm">
+                    No new leads yet.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -255,12 +292,12 @@ export const Dashboard: React.FC = () => {
                 <AlertCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-white font-semibold text-sm">Q3 Market Report Available</p>
-                <p className="text-blue-100 text-xs">Download and share with your leads</p>
+                <p className="text-white font-semibold text-sm">Welcome to FoxCRM!</p>
+                <p className="text-blue-100 text-xs">Your production dashboard is ready.</p>
               </div>
             </div>
             <button className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors backdrop-blur-sm">
-              Download
+              Do More
             </button>
           </div>
 

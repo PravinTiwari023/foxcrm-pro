@@ -14,7 +14,9 @@ import { DealDetail } from './pages/DealDetail';
 import { SignIn } from './pages/auth/SignIn';
 import { SignUp } from './pages/auth/SignUp';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
+import { PromoteLead } from './pages/PromoteLead';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DataProvider } from './contexts/DataContext';
 import logo from './assets/logo.png';
 import { initializeAnalytics, trackPageView } from './lib/firebase';
 
@@ -139,6 +141,11 @@ const AnimatedRoutes: React.FC = () => {
               <Layout><FollowUp /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/leads/:id/promote" element={
+            <ProtectedRoute>
+              <Layout><PromoteLead /></Layout>
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatedPage>
@@ -154,9 +161,11 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AnimatedRoutes />
-      </BrowserRouter>
+      <DataProvider>
+        <BrowserRouter>
+          <AnimatedRoutes />
+        </BrowserRouter>
+      </DataProvider>
     </AuthProvider>
   );
 };

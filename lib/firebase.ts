@@ -19,6 +19,10 @@ const app = initializeApp(firebaseConfig);
 // Initialize Auth
 export const auth = getAuth(app);
 
+// Initialize Firestore
+import { getFirestore } from 'firebase/firestore';
+export const db = getFirestore(app);
+
 // Initialize Analytics (only in browser)
 let analytics: ReturnType<typeof getAnalytics> | null = null;
 let performance: ReturnType<typeof getPerformance> | null = null;

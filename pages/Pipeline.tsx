@@ -5,6 +5,7 @@ import {
   Clock, AlertTriangle, Timer, MoreHorizontal
 } from 'lucide-react';
 import { Deal, StageId } from '../types';
+import { useData } from '../contexts/DataContext';
 
 // --- Configuration ---
 
@@ -13,57 +14,6 @@ const STAGES: { id: StageId; label: string; icon: React.ElementType; color: stri
   { id: 'documentation', label: 'Documentation', icon: FileText, color: 'text-amber-600', borderColor: 'border-amber-500', bg: 'bg-amber-50' },
   { id: 'payment', label: 'Payment', icon: CreditCard, color: 'text-purple-600', borderColor: 'border-purple-500', bg: 'bg-purple-50' },
   { id: 'closed', label: 'Closed', icon: CheckCircle, color: 'text-emerald-600', borderColor: 'border-emerald-500', bg: 'bg-emerald-50' },
-];
-
-// --- Mock Data ---
-
-const INITIAL_PIPELINE: Deal[] = [
-  {
-    id: '1', title: 'Sarah Jenkins', value: '₹3.73 Cr', numericValue: 37350000,
-    stage: 'negotiation', source: 'Zillow', lastTouch: '2h ago',
-    completion: 25, isUrgent: true, daysInStage: 2,
-    tasks: [
-      { id: 't1', label: 'Price Agreement', done: false },
-      { id: 't2', label: 'Terms Sheet', done: false }
-    ]
-  },
-  {
-    id: '2', title: 'Mike Ross', value: '₹7.05 Cr', numericValue: 70550000,
-    stage: 'documentation', source: 'Referral', lastTouch: '1d ago',
-    completion: 60, isUrgent: false, daysInStage: 5,
-    tasks: [
-      { id: 't1', label: 'Contract Signed', done: true },
-      { id: 't2', label: 'ID Verified', done: true },
-      { id: 't3', label: 'Title Search', done: false }
-    ]
-  },
-  {
-    id: '3', title: 'Tech Corp HQ', value: '₹9.96 Cr', numericValue: 99600000,
-    stage: 'payment', source: 'Web', lastTouch: '4h ago',
-    completion: 90, isUrgent: false, daysInStage: 1,
-    tasks: [
-      { id: 't1', label: 'Deposit Received', done: true },
-      { id: 't2', label: 'Escrow Confirmed', done: true },
-      { id: 't3', label: 'Final Transfer', done: false }
-    ]
-  },
-  {
-    id: '4', title: 'The Davidsons', value: '₹5.4 Cr', numericValue: 53950000,
-    stage: 'negotiation', source: 'Ads', lastTouch: '30m ago',
-    completion: 10, isUrgent: true, daysInStage: 8,
-    tasks: [
-      { id: 't1', label: 'Initial Offer', done: true },
-      { id: 't2', label: 'Counter Offer', done: false }
-    ]
-  },
-  {
-    id: '5', title: 'Downtown Inv.', value: '₹17.43 Cr', numericValue: 174300000,
-    stage: 'closed', source: 'Referral', lastTouch: '1w ago',
-    completion: 100, isUrgent: false, daysInStage: 12,
-    tasks: [
-      { id: 't1', label: 'Keys Handed Over', done: true }
-    ]
-  },
 ];
 
 // --- Components ---
@@ -98,7 +48,7 @@ const ProgressRing: React.FC<{ percentage: number; colorClass?: string }> = ({ p
           cy="20"
         />
       </svg>
-      <span className="absolute text-[9px] font-bold text-slate-700 dark:text-slate-300">{percentage}%</span>
+      <span className="absolute text-[8px] font-bold text-slate-700 dark:text-slate-300">{percentage}%</span>
     </div>
   );
 };
@@ -146,13 +96,21 @@ const PipelineCard: React.FC<{ deal: Deal; onClick: () => void; stageColor: stri
   );
 };
 
+// --- Main Pipeline Component ---
+
+// --- Main Pipeline Component ---
+
 export const Pipeline: React.FC = () => {
   const navigate = useNavigate();
-  const [deals, setDeals] = useState<Deal[]>(INITIAL_PIPELINE);
-  const [activeStage, setActiveStage] = useState<StageId>('negotiation');
+  const { deals, loading } = useData();
 
-  const getDealsByStage = (stage: StageId) => deals.filter(d => d.stage === stage);
-  const getStageTotal = (stage: StageId) => getDealsByStage(stage).reduce((acc, curr) => acc + curr.numericValue, 0);
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="w-8 h-8 border-3 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const formatCurrency = (val: number) => {
     if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)} Cr`;
@@ -160,116 +118,80 @@ export const Pipeline: React.FC = () => {
     return `₹${(val / 1000).toFixed(0)}k`;
   };
 
-  const handleDealClick = (deal: Deal) => {
-    navigate(`/pipeline/${deal.id}`);
-  };
+  const getDealsByStage = (stageId: StageId) => deals.filter(d => d.stage === stageId);
+  const getStageTotal = (stageId: StageId) => getDealsByStage(stageId).reduce((acc, curr) => acc + curr.numericValue, 0);
 
   return (
     <div className="h-[calc(100vh-64px)] md:h-screen flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden transition-colors">
 
-      {/* --- Header --- */}
-      <div className="px-4 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0 transition-colors">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white">Transaction Engine</h1>
-          <p className="hidden md:block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Active deals and closings.</p>
-        </div>
+      {/* Header */}
+      <div className="px-4 py-4 md:px-6 md:py-6 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shrink-0 transition-colors">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Pipeline</h1>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Manage your active deals and move them to close.</p>
       </div>
 
-      {/* --- Mobile: Instagram-style Stage Nav --- */}
-      <div className="md:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shrink-0 overflow-x-auto no-scrollbar transition-colors">
-        <div className="flex px-2">
+      {/* Kanban Board */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 no-scrollbar">
+        <div className="flex gap-4 h-full min-w-[1000px] md:min-w-0">
+
           {STAGES.map((stage) => {
-            const isActive = activeStage === stage.id;
-            const Icon = stage.icon;
+            const stageDeals = getDealsByStage(stage.id);
+            const stageColor = stage.color;
+
             return (
-              <button
-                key={stage.id}
-                onClick={() => setActiveStage(stage.id)}
-                className={`
-                  flex flex-col items-center justify-center gap-1 py-3 px-4 min-w-[90px] transition-colors border-b-2
-                  ${isActive ? `border-slate-800 dark:border-blue-400 text-slate-800 dark:text-white` : 'border-transparent text-slate-400 dark:text-slate-500'}
-                `}
-              >
-                <div className={`p-2 rounded-full ${isActive ? stage.bg : 'bg-slate-50'}`}>
-                  <Icon className={`w-5 h-5 ${isActive ? stage.color : 'text-slate-400'}`} />
+              <div key={stage.id} className="flex-1 flex flex-col min-w-[280px] bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+                {/* Stage Header */}
+                <div className="p-4 border-b border-slate-200/50 dark:border-slate-700/50 flex justify-between items-center bg-white/50 dark:bg-slate-800/80 backdrop-blur-sm">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${stage.bg}`}>
+                      <stage.icon className={`w-4 h-4 ${stageColor}`} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm">{stage.label}</h3>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                        {formatCurrency(getStageTotal(stage.id))} Vol.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                    {stageDeals.length}
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wide">{stage.label}</span>
-              </button>
+
+                {/* List Container */}
+                <div className="flex-1 p-2 overflow-y-auto space-y-3 custom-scrollbar">
+                  {stageDeals.map((deal) => (
+                    <PipelineCard
+                      key={deal.id}
+                      deal={deal}
+                      onClick={() => navigate(`/pipeline/${deal.id}`)}
+                      stageColor={stageColor}
+                    />
+                  ))}
+
+                  {/* Empty State for Column */}
+                  {stageDeals.length === 0 && (
+                    <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+                      <stage.icon className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+                      <span className="text-xs text-slate-400 font-medium">No Deals</span>
+                    </div>
+                  )}
+
+                  {/* Add Button Placeholder - Only on negotiation stage */}
+                  {stage.id === 'negotiation' && (
+                    <button
+                      onClick={() => navigate('/pipeline/new')}
+                      className="w-full py-3 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    >
+                      + Add New Deal
+                    </button>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
       </div>
-
-      {/* --- Mobile: Vertical List for Active Stage --- */}
-      <div className="md:hidden flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
-            {getDealsByStage(activeStage).length} Active Deals
-          </span>
-          <span className="text-xs font-mono text-slate-800 dark:text-slate-100 font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded">
-            {formatCurrency(getStageTotal(activeStage))}
-          </span>
-        </div>
-        <div className="space-y-3">
-          {getDealsByStage(activeStage).map(deal => (
-            <PipelineCard
-              key={deal.id}
-              deal={deal}
-              onClick={() => handleDealClick(deal)}
-              stageColor={STAGES.find(s => s.id === activeStage)!.color}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* --- Desktop: Kanban Board --- */}
-      <div className="hidden md:flex flex-1 overflow-x-auto p-6 gap-6 w-full h-full">
-        {STAGES.map((stage) => {
-          const Icon = stage.icon;
-          return (
-            <div key={stage.id} className="min-w-[320px] flex-1 flex flex-col h-full">
-              {/* Column Header */}
-              <div className={`
-                flex items-center justify-between p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm mb-4
-              `}>
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${stage.bg}`}>
-                    <Icon className={`w-5 h-5 ${stage.color}`} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800 dark:text-white text-sm">{stage.label}</h3>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                      {formatCurrency(getStageTotal(stage.id))} Vol.
-                    </p>
-                  </div>
-                </div>
-                <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-600">
-                  {getDealsByStage(stage.id).length}
-                </span>
-              </div>
-
-              {/* Column Body */}
-              <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar pb-20">
-                {getDealsByStage(stage.id).map(deal => (
-                  <PipelineCard
-                    key={deal.id}
-                    deal={deal}
-                    onClick={() => handleDealClick(deal)}
-                    stageColor={stage.color}
-                  />
-                ))}
-                {getDealsByStage(stage.id).length === 0 && (
-                  <div className="h-32 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 gap-2">
-                    <Icon className="w-6 h-6 opacity-30" />
-                    <span className="text-xs font-medium">No active deals</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
     </div>
   );
 };

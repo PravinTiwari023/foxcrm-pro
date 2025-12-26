@@ -5,98 +5,7 @@ import {
   Plus, AlertCircle, Clock, Flame, Snowflake, ThermometerSun
 } from 'lucide-react';
 import { Lead, LeadTemp } from '../types';
-
-// --- Mock Data ---
-const MOCK_LEADS: Lead[] = [
-  {
-    id: '1',
-    name: 'Alice Freeman',
-    email: 'alice@example.com',
-    phone: '(555) 123-4567',
-    status: 'Qualified',
-    source: 'Zillow',
-    interest: 'Buying',
-    budget: '₹3.73 Cr',
-    lastActive: '2h ago',
-    temperature: 'Hot',
-    nextAction: { date: 'Today, 2:00 PM', task: 'Follow-up Call', isOverdue: false },
-    tags: ['Pre-approved', 'First-time Buyer'],
-    notes: 'Looking for a 3bd/2ba near downtown. Pre-approval letter ready.',
-    history: [
-      { id: 'h1', type: 'Call', date: '2 hours ago', summary: 'Discussed budget and preferred neighborhoods.', user: 'You' },
-      { id: 'h2', type: 'System', date: 'Yesterday', summary: 'Lead imported from Zillow.' },
-    ]
-  },
-  {
-    id: '2',
-    name: 'Bob Smith',
-    email: 'bob@example.com',
-    phone: '(555) 987-6543',
-    status: 'Contacted',
-    source: 'Website',
-    interest: 'Selling',
-    budget: '₹5.4 Cr',
-    lastActive: '5h ago',
-    temperature: 'Warm',
-    tags: ['Relocation', 'Seller'],
-    notes: 'Needs to sell current home before buying. Timeline 3 months.',
-    history: [
-      { id: 'h1', type: 'Email', date: '5 hours ago', summary: 'Sent market analysis report.', user: 'You' },
-    ]
-  },
-  {
-    id: '3',
-    name: 'Charlie Davis',
-    email: 'charlie@example.com',
-    phone: '(555) 456-7890',
-    status: 'Qualified',
-    source: 'Referral',
-    interest: 'Buying',
-    budget: '₹6.64 Cr',
-    lastActive: '1d ago',
-    temperature: 'Hot',
-    nextAction: { date: 'Yesterday', task: 'Send Contract', isOverdue: true },
-    tags: ['Cash Buyer', 'Urgent'],
-    notes: 'Cash buyer, very motivated. Wants to close fast.',
-    history: [
-      { id: 'h1', type: 'Meeting', date: 'Yesterday', summary: 'Showed property at 789 Downtown Pkwy.', user: 'You' },
-      { id: 'h2', type: 'Call', date: '2 days ago', summary: 'Initial qualification call.', user: 'You' },
-    ]
-  },
-  {
-    id: '4',
-    name: 'Diana Prince',
-    email: 'diana@example.com',
-    phone: '(555) 222-3333',
-    status: 'Lost',
-    source: 'Facebook',
-    interest: 'Renting',
-    budget: '₹2.07 L/mo',
-    lastActive: '3d ago',
-    temperature: 'Cold',
-    tags: [],
-    notes: 'Just looking, budget too low for current market.',
-    history: [
-      { id: 'h1', type: 'Note', date: '3 days ago', summary: 'Marked as cold. Budget unrealistic.', user: 'You' },
-    ]
-  },
-  {
-    id: '5',
-    name: 'Evan Wright',
-    email: 'evan@example.com',
-    phone: '(555) 444-5555',
-    status: 'New',
-    source: 'Direct',
-    interest: 'Buying',
-    budget: '₹9.96 Cr',
-    lastActive: '10m ago',
-    temperature: 'Warm',
-    nextAction: { date: 'Tomorrow', task: 'Schedule Showing', isOverdue: false },
-    tags: ['Luxury', 'Waterfront'],
-    notes: 'Interested in waterfront properties.',
-    history: []
-  },
-];
+import { useData } from '../contexts/DataContext';
 
 
 // --- Components ---
@@ -174,210 +83,210 @@ const StatusSelect: React.FC<{ status: string }> = ({ status }) => {
 
 export const Leads: React.FC = () => {
   const navigate = useNavigate();
-  const [activeFilter, setActiveFilter] = useState('all');
+  const { leads, loading } = useData();
 
-  // Filter Logic
-  const filteredLeads = MOCK_LEADS.filter(lead => {
-    if (activeFilter === 'new') return lead.status === 'New';
-    if (activeFilter === 'hot') return lead.temperature === 'Hot';
-    if (activeFilter === 'action') return lead.nextAction && (lead.nextAction.isOverdue || lead.status === 'New');
-    return true;
+  // State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [tempFilter, setTempFilter] = useState<LeadTemp | 'All'>('All');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [view, setView] = useState<'list' | 'grid'>('list');
+
+  // Filter Leads
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTemp = tempFilter === 'All' || lead.temperature === tempFilter;
+    const matchesStatus = statusFilter === 'All' || lead.status === statusFilter;
+    return matchesSearch && matchesTemp && matchesStatus;
   });
 
-  const handleRowClick = (lead: Lead) => {
-    navigate(`/leads/${lead.id}`);
+  // Helpers
+  const getTempIcon = (temp: LeadTemp) => {
+    switch (temp) {
+      case 'Hot': return <Flame className="w-4 h-4 text-orange-500" />;
+      case 'Warm': return <ThermometerSun className="w-4 h-4 text-amber-500" />;
+      case 'Cold': return <Snowflake className="w-4 h-4 text-blue-400" />;
+      default: return <Clock className="w-4 h-4 text-slate-400" />;
+    }
   };
 
-  const handleFollowUpClick = (lead: Lead) => {
-    navigate(`/leads/${lead.id}/follow-up`);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'New': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
+      case 'Contacted': return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
+      case 'Qualified': return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300';
+      case 'Lost': return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
+      default: return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
+    }
   };
 
-  const handleAddLead = () => {
-    navigate('/leads/new');
-  };
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="w-8 h-8 border-3 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-64px)] md:h-screen flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden transition-colors">
 
-      {/* --- Header --- */}
-      <div className="px-4 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0 transition-colors">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white">Lead Qualification</h1>
-          <p className="hidden md:block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Qualify, nurture, and convert incoming leads.</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleAddLead}
-            className="bg-slate-900 dark:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-800 dark:hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Lead</span>
-          </button>
-        </div>
-      </div>
+      {/* Header */}
+      <div className="px-4 py-4 md:px-6 md:py-6 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shrink-0 transition-colors">
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Leads</h1>
+            <button
+              onClick={() => navigate('/leads/new')}
+              className="flex items-center gap-2 bg-slate-900 dark:bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden md:inline">Add Lead</span>
+            </button>
+          </div>
 
-      {/* Filter and Search Bar */}
-      <div className="px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shrink-0">
-        <div className="flex flex-col md:flex-row gap-3 justify-between md:items-center">
-          <FilterChips active={activeFilter} onChange={setActiveFilter} />
-          <div className="relative md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search leads..."
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 transition-all"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search leads..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 bg-slate-100 dark:bg-slate-700/50 border-none rounded-xl text-sm focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600 text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="pl-3 pr-8 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600 outline-none text-slate-700 dark:text-slate-200 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                <option value="All">All Status</option>
+                <option value="New">New</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Qualified">Qualified</option>
+                <option value="Lost">Lost</option>
+              </select>
+              <select
+                value={tempFilter}
+                onChange={(e) => setTempFilter(e.target.value as any)}
+                className="pl-3 pr-8 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600 outline-none text-slate-700 dark:text-slate-200 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                <option value="All">All Temps</option>
+                <option value="Hot">Hot</option>
+                <option value="Warm">Warm</option>
+                <option value="Cold">Cold</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-32 md:pb-8">
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
 
-        {/* --- DESKTOP TABLE VIEW --- */}
-        <div className="hidden md:block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden transition-colors">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-600">
-              <tr>
-                <th className="px-6 py-4 text-xs uppercase tracking-wider">Lead Profile</th>
-                <th className="px-6 py-4 text-xs uppercase tracking-wider">Temperature</th>
-                <th className="px-6 py-4 text-xs uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs uppercase tracking-wider">Next Follow-up</th>
-                <th className="px-6 py-4 text-right text-xs uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {filteredLeads.map((lead) => (
-                <tr
-                  key={lead.id}
-                  className="group hover:bg-blue-50/30 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
-                  onClick={(e) => {
-                    if ((e.target as HTMLElement).closest('button')) return;
-                    handleRowClick(lead);
-                  }}
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex items-center justify-center font-bold text-sm ring-4 ring-slate-50 dark:ring-slate-800 group-hover:ring-blue-50 dark:group-hover:ring-blue-900/30 transition-all">
-                        {lead.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">{lead.name}</div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                          <span className="truncate max-w-[120px]">{lead.phone}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <TempBadge temp={lead.temperature} />
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusSelect status={lead.status} />
-                  </td>
-                  <td className="px-6 py-4">
-                    {lead.nextAction ? (
-                      <div>
-                        <div className={`flex items-center gap-1.5 ${lead.nextAction.isOverdue ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-700 dark:text-slate-300 font-bold'}`}>
-                          {lead.nextAction.isOverdue ? <AlertCircle className="w-4 h-4" /> : <Clock className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
-                          <span>{lead.nextAction.date}</span>
-                        </div>
-                        <div className="text-xs text-slate-500 mt-0.5 ml-5.5 font-medium">{lead.nextAction.task}</div>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-400 italic font-medium ml-6">No tasks</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Call">
-                        <Phone className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors" title="WhatsApp">
-                        <MessageCircle className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleFollowUpClick(lead); }}
-                        className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
-                        title="Add Follow Up"
-                      >
-                        <BellPlus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* --- MOBILE CARD VIEW --- */}
-        <div className="md:hidden space-y-3">
-          {filteredLeads.map((lead) => (
-            <div
-              key={lead.id}
-              className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden active:scale-[0.99] transition-transform"
-              onClick={() => handleRowClick(lead)}
-            >
-              <div className="p-4">
-                {/* Top Row: Avatar, Name, Temperature */}
-                <div className="flex items-center justify-between mb-3">
+        {filteredLeads.length === 0 ? (
+          <div className="h-64 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+            <Search className="w-8 h-8 mb-2 opacity-50" />
+            <p>No leads found matching your filters.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredLeads.map((lead) => (
+              <div
+                key={lead.id}
+                onClick={() => navigate(`/leads/${lead.id}`)}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-slate-300 dark:hover:border-slate-600 transition-all cursor-pointer group shadow-sm hover:shadow-md"
+              >
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-lg group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
                       {lead.name.charAt(0)}
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900 dark:text-white text-sm">{lead.name}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{lead.budget} • {lead.source}</p>
+                      <h3 className="font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{lead.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${getStatusColor(lead.status)}`}>
+                          {lead.status}
+                        </span>
+                        <div className="flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                          {getTempIcon(lead.temperature)}
+                          <span>{lead.temperature}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <TempBadge temp={lead.temperature} />
-                </div>
-
-                {/* Status and Next Action Row */}
-                <div className="flex items-center justify-between">
-                  <StatusSelect status={lead.status} />
-                  {lead.nextAction ? (
-                    <div className={`flex items-center gap-1.5 text-xs font-medium ${lead.nextAction.isOverdue ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{lead.nextAction.date}</span>
+                  {lead.nextAction?.isOverdue && (
+                    <div className="flex flex-col items-end">
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-full animate-pulse">
+                        <AlertCircle className="w-3 h-3" /> Overdue
+                      </span>
                     </div>
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">No tasks</span>
                   )}
                 </div>
-              </div>
 
-              {/* Compact Action Bar */}
-              <div className="flex items-center justify-around border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/30">
-                <button
-                  className="flex-1 flex items-center justify-center gap-2 py-3 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); }}
-                >
-                  <Phone className="w-4 h-4" />
-                  <span className="text-xs font-semibold">Call</span>
-                </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-600"></div>
-                <button
-                  className="flex-1 flex items-center justify-center gap-2 py-3 text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); }}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="text-xs font-semibold">WhatsApp</span>
-                </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-600"></div>
-                <button
-                  className="flex-1 flex items-center justify-center gap-2 py-3 text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); handleFollowUpClick(lead); }}
-                >
-                  <BellPlus className="w-4 h-4" />
-                  <span className="text-xs font-semibold">Follow Up</span>
-                </button>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold block mb-1">Budget</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm">{lead.budget}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold block mb-1">Source</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm">{lead.source}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold block mb-1">Next Task</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate block" title={lead.nextAction?.task || 'None'}>
+                      {lead.nextAction?.task || 'None'}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold block mb-1">Last Active</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm">{lead.lastActive}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700">
+                  <div className="flex gap-2">
+                    {lead.tags && lead.tags.slice(0, 3).map((tag, i) => (
+                      <span key={i} className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); /* Call logic */ }}
+                      className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-full transition-colors"
+                      title="Call"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); /* Email logic */ }}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors"
+                      title="Email"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate('/follow-up') }}
+                      className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-full transition-colors"
+                      title="Add Task"
+                    >
+                      <BellPlus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
-
     </div>
   );
 };

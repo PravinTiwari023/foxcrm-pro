@@ -11,7 +11,17 @@
       "Bash(echo:*)",
       "Bash(git commit:*)",
       "Bash(git branch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(npm run build:*)",
+      "Bash(powershell -Command \"\\(Get-Content dist\\\\assets\\\\index-DPwly_oM.css | Select-String -Pattern ''Inter'' -CaseSensitive\\).Matches.Value\")",
+      "Bash(powershell -Command \"\\(Get-Content dist\\\\assets\\\\index-DPwly_oM.css | Select-String -Pattern ''dark:'' -AllMatches\\).Matches.Count\")",
+      "Bash(powershell -Command \"\\(Get-Content dist\\\\assets\\\\index-DPwly_oM.css -Raw\\).Contains\\(''.dark''\\)\")",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run preview:*)",
+      "WebFetch(domain:foxcrm-pro.web.app)",
+      "Bash(npx firebase deploy:*)"
     ]
   }
 }

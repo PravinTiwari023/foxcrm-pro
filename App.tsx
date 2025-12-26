@@ -15,6 +15,7 @@ import { SignIn } from './pages/auth/SignIn';
 import { SignUp } from './pages/auth/SignUp';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import logo from './assets/logo.png';
 import { initializeAnalytics, trackPageView } from './lib/firebase';
 
 // Loading spinner component
@@ -22,7 +23,7 @@ const LoadingScreen: React.FC = () => (
   <div className="min-h-screen bg-slate-900 flex items-center justify-center">
     <div className="text-center">
       <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl shadow-lg shadow-orange-500/30 mb-4">
-        <img src="/fox.png" alt="FoxCRM" className="w-10 h-10" />
+        <img src={logo} alt="FoxCRM" className="w-10 h-10" />
       </div>
       <div className="w-8 h-8 border-3 border-orange-500/30 border-t-orange-500 rounded-full animate-spin mx-auto mt-4" />
     </div>

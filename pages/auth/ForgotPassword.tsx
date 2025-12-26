@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, Send, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { trackPageView } from '../../lib/firebase';
+import logo from '../../assets/logo.png';
 
 export const ForgotPassword: React.FC = () => {
   const { resetPassword } = useAuth();
@@ -45,7 +46,7 @@ export const ForgotPassword: React.FC = () => {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl shadow-lg shadow-orange-500/30 mb-4">
-            <img src="/fox.png" alt="FoxCRM" className="w-10 h-10" />
+            <img src={logo} alt="FoxCRM" className="w-10 h-10" />
           </div>
           <h1 className="text-2xl font-bold text-white">Reset your password</h1>
           <p className="text-slate-400 mt-1">We'll send you a reset link</p>

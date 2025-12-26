@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, ICON_MAP } from '../../constants';
 import { LogOut } from 'lucide-react';
+import logo from '../../assets/logo.png';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const Sidebar: React.FC = () => {
@@ -21,7 +22,7 @@ export const Sidebar: React.FC = () => {
     <aside className="hidden md:flex flex-col w-64 h-screen bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 fixed left-0 top-0 z-20 transition-colors">
       <div className="p-6 flex items-center gap-3 border-b border-slate-100 dark:border-slate-700">
         <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-          <img src="/fox.png" alt="FoxCRM" className="w-6 h-6" />
+          <img src={logo} alt="FoxCRM" className="w-6 h-6" />
         </div>
         <span className="text-slate-800 dark:text-slate-100 font-bold text-xl tracking-tight">Fox<span className="text-orange-600 dark:text-orange-400">CRM</span></span>
       </div>

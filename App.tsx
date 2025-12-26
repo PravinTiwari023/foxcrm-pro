@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Navigation/Sidebar';
 import { MobileNav } from './components/Navigation/MobileNav';
 import { AnimatedPage } from './components/AnimatedPage';
@@ -153,9 +153,9 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
-      <HashRouter>
+      <BrowserRouter>
         <AnimatedRoutes />
-      </HashRouter>
+      </BrowserRouter>
     </AuthProvider>
   );
 };
